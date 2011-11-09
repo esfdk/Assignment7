@@ -1,0 +1,264 @@
+system_chart SEVENTH_ASSIGNMENT
+indexing
+	author: "Parasect";
+	course: "BDSA E2011";
+	created: "5th November 2011";
+explanation
+	"BON specification for the seventh assignment."
+cluster DESIGN_BY_CONTRACT
+	description "Collections: Lists, sets and bags!"
+end
+
+cluster_chart DESIGN_BY_CONTRACT
+explanation "Collection interface and three subtypes: List, Set and Bag."
+class COLLECTION
+	description "Collection of elements."
+class NEW_LIST
+	description "Elements in a specific sequence."
+class SET_NEW
+	description "Collection of unique elements."
+class BAG
+	description "Collection of elements in no specific order."
+class TESTOFCOLLECTIONS
+	description "Test for the collections"
+end
+
+class_chart COLLECTION
+explanation "A collection of elements."
+query
+	"Do you hold this element?",
+	"How many elements do you hold?",
+	"Are you empty?",
+	"Does this hold for an element?",
+	"Does this hold for all elements?",
+	"Does this hold for a single element only?",
+command
+	"Add this element!",
+	"Remove this element!",
+	"Remove all elements!",
+	"Do this on all your elements and give me a new Set with the new elements!",
+constraint
+	"A collection is empty if it contains no elements.",
+	"A collection may contain a null element.",
+	"May hold more than one of the same element."
+end
+
+class_chart BAG
+explanation "A collection of elements in no particular order or sequence."
+query
+	"Do you hold this element?",
+	"How many elements do you hold?",
+	"Are you empty?",
+	"Does this hold for an element?",
+	"Does this hold for all elements?",
+	"Does this hold for a single element only?",
+command
+	"Add this element!",
+	"Remove this element!",
+	"Remove all elements!",
+	"Do this on all your elements and give me a new Set with the new elements!",
+constraint
+	"A bag is empty if it contains no elements.",
+	"A bag may contain a null element.",
+	"May hold more than one of the same element."
+end
+	
+class_chart NEW_LIST
+explanation "A collection of non-ordered elements in a specific sequence."
+query
+	"Do you hold this element?",
+	"Are you empty?",
+	"How many elements do you hold?",
+	"What is the first index of this element?",
+	"What is the last index of this element?",
+	"Does this hold for an element?",
+	"Does this hold for all elements?",
+	"Does this hold for a single element only?",
+command
+	"Give me the element at this position!",
+	"Add this element at this position!",
+	"Add this element!",
+	"Remove the element at this position!",
+	"Remove this element!",
+	"Remove all elements!",
+	"Do this on all your elements and give me a new Set with the new elements!",
+constraint
+	"Must not hold a negative amount of elements.",
+	"An element in the list may be null.",
+	"A list is empty if there are no elements in the list.",
+	"May hold more than one of the same element."
+end
+
+class_chart SET_NEW
+explanation "A collection of unique elements with no specific ordering."
+query
+	"Do you hold this element?",
+	"Are you empty?",
+	"How many elements do you hold?",
+	"Does this hold for an element?",
+	"Does this hold for all elements?",
+	"Does this hold for a single element only?",
+command
+	"Add this element!",
+	"Remove this element!",
+	"Remove all elements!",
+	"Do this on all your elements and give me a new Set with the new elements!",
+constraint
+	"Must not hold two of the same elements.",
+	"A set is empty if it contains no elements.",
+	"An element in the list may be null."
+end
+
+class_chart TESTOFCOLLECTIONS
+explanation "Tests for the collections."
+command
+	"Test everything!",
+	"Test the bag!",
+	"Test the set!",
+	"Test the list!"
+end
+
+static_diagram CLASS_INTERFACES
+component
+	cluster DESIGN_BY_CONTRACT
+		component
+			deferred class COLLECTION[T]
+				feature
+					--Queries
+					Size : NATURAL
+					Contains : BOOLEAN 
+						-> obj : T
+						require
+							obj /= Void
+					end
+					Count : NATURAL
+						-> obj :T
+						require
+							obj /= Void
+						ensure
+							Result = 0 <-> not Contains(obj)
+					end
+					IsEmpty : BOOLEAN
+						ensure Result <-> Size=0
+					end
+					Forall: BOOLEAN -> p: PREDICATE[T]
+					Exist: BOOLEAN -> p: PREDICATE[T]
+					Exists_unique: BOOLEAN -> p: PREDICATE[T]
+					
+					--Commands
+					Add 
+						-> obj : T
+						require
+							obj /= Void
+						ensure 
+							Current.Contains(obj)
+						end
+					Remove 
+						-> obj : T
+						ensure
+							old Contains(obj) -> (Count(obj) = old Count(obj) - 1 and Size = old size - 1) and not old Contains(obj) -> Size = old Size
+						end
+					RemoveAll
+						ensure 
+							Size = 0
+						end
+					deferred Map: COLLECTION[U] -> f: FUNCTION[T, U]
+					CollectionChanged : EVENT
+			end
+			class BAG[T]
+				inherit COLLECTION[T]
+				feature
+					--Only inherited queries.
+					
+					--Commands
+					redefined Add 
+						-> obj : T
+						require
+							obj /= Void
+						ensure 
+							Size = (old Size) + 1 and Current.Contains(obj) and	Current.Count(obj) = old Count(obj) + 1
+						end
+						effective Map: BAG[U] -> f: FUNCTION[T, U]
+			end
+			class NEW_SET[T] --Prefix because SET already exists in BON
+				inherit COLLECTION[T]
+				feature
+					--Only inherited queries so far.			
+					
+					--Commands
+					redefined Add
+						-> obj : T
+						require
+							obj /= Void
+						ensure 
+							Current.Contains(obj) and (not old Contains(obj) -> Size = old Size + 1) and (old Contains(obj) -> Size = old Size)
+					end
+					
+					redefined Remove
+						-> obj : T
+						require
+							obj /= Void
+						ensure
+							(old Contains(obj) -> Size = old size - 1) and (not old Contains(obj) -> Size = old Size) and not Current.Contains(obj)
+					end
+					effective Map: NEW_SET[U] -> f: FUNCTION[T, U]
+					
+				invariant
+				    true --Because the compiler requires an actual invariant to be there 
+					--No element is equal to another element in the set.
+			end
+			class NEW_LIST[T]
+				inherit BAG[T]
+				feature	
+				--Queries : Some are inherited.
+					FirstIndex : NATURAL 
+						-> obj : T
+						require
+							obj /= Void
+						ensure 
+							old Contains(obj) -> Current.Get(Result) = obj
+						end
+					
+					LastIndex : NATURAL
+						-> obj : T
+						require
+							obj /= Void
+						ensure 
+							old Contains(obj) -> Current.Get(Result) = obj
+					end
+					
+				--Commands
+					Get : T 
+						-> i : NATURAL
+						require 
+							i < Size
+						ensure 
+							Current.Contains(T)
+					end
+					redefined Add
+						-> obj : T
+						require
+							obj /= Void
+						ensure 
+							Current.Contains(obj) and Current.LastIndex(obj) = (Size - 1) and Size = (old Size) + 1
+					end
+					AddAt 
+						-> obj : T 
+						-> i : NATURAL
+						require
+							obj /= Void and i < Size
+						ensure 
+							Current.Get(i) = obj and Size = (old Size) + 1 and Current.Contains(obj)
+					end
+					RemoveAt 
+						-> i : NATURAL
+						require
+							i < Size
+						ensure
+							Current.Get(i) = old Get(i + 1) and (old Contains(obj) -> Count(old Get(i)) = old Count(old Get(i)) - 1)
+					end
+					redefined Map: NEW_LIST[U] -> f: FUNCTION[T, U]
+			end
+		end
+	end
+	
